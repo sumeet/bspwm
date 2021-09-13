@@ -480,6 +480,62 @@ xcb_rectangle_t get_window_rectangle(node_t *n)
 	return (xcb_rectangle_t) {0, 0, screen_width, screen_height};
 }
 
+
+bool warp_client(coordinates_t *loc, int dx, int dy)
+{
+	node_t *n = loc->node;
+
+	if (n == NULL || n->client == NULL) {
+		return false;
+	}
+
+	monitor_t *pm = NULL;
+
+	if (!IS_TILED(n->client)) {
+		return false;
+	}
+	if (!grabbing) {
+		return false;
+	}
+	xcb_window_t pwin = XCB_NONE;
+	query_pointer(&pwin, NULL);
+	if (pwin == n->id) {
+		return false;
+	}
+	coordinates_t dst;
+	bool is_managed = (pwin != XCB_NONE && locate_window(pwin, &dst));
+
+	// this is a regular swap, same monitor
+	if (is_managed && dst.monitor == loc->monitor && IS_TILED(dst.node->client)) {
+		printf("warping. focus_follows_pointer: %d\n", focus_follows_pointer);
+		printf("src node: %s\n", n->client->class_name);
+		printf("dest node: %s\n", dst.node->client->class_name);
+		// TODO: we should do the warp in here
+		// whoa is the warp this easy?
+		transfer_node(loc->monitor, loc->desktop, n, loc->monitor, loc->desktop, dst.node, focus_follows_pointer);
+		return true;
+	} else {
+		// can't move into a floating window
+		if (is_managed && dst.monitor == loc->monitor) {
+			return false;
+		} else {
+			xcb_point_t pt = {0, 0};
+			query_pointer(NULL, &pt);
+			pm = monitor_from_point(pt);
+		}
+	}
+
+	if (pm == NULL || pm == loc->monitor) {
+		return true;
+	}
+
+	transfer_node(loc->monitor, loc->desktop, n, pm, pm->desk, pm->desk->focus, true);
+	loc->monitor = pm;
+	loc->desktop = pm->desk;
+
+	return true;
+}
+
 bool move_client(coordinates_t *loc, int dx, int dy)
 {
 	node_t *n = loc->node;
@@ -501,8 +557,13 @@ bool move_client(coordinates_t *loc, int dx, int dy)
 		}
 		coordinates_t dst;
 		bool is_managed = (pwin != XCB_NONE && locate_window(pwin, &dst));
+		// this is a regular swap, same monitor
 		if (is_managed && dst.monitor == loc->monitor && IS_TILED(dst.node->client)) {
-			swap_nodes(loc->monitor, loc->desktop, n, loc->monitor, loc->desktop, dst.node, false);
+			printf("swapping. focus_follows_pointer: %d\n", focus_follows_pointer);
+			printf("src node: %s\n", n->client->class_name);
+			printf("dest node: %s\n", dst.node->client->class_name);
+			// TODO: i think `follow` should be set to the preference of focus follow mouse... i will try setting it to true
+			swap_nodes(loc->monitor, loc->desktop, n, loc->monitor, loc->desktop, dst.node, focus_follows_pointer);
 			return true;
 		} else {
 			if (is_managed && dst.monitor == loc->monitor) {

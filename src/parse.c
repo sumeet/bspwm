@@ -239,6 +239,9 @@ bool parse_pointer_action(char *s, pointer_action_t *a)
 	if (streq("move", s)) {
 		*a = ACTION_MOVE;
 		return true;
+	} else if (streq("warp", s)) {
+		*a = ACTION_WARP;
+		return true;
 	} else if (streq("resize_corner", s)) {
 		*a = ACTION_RESIZE_CORNER;
 		return true;

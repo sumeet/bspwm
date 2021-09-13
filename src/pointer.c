@@ -247,6 +247,8 @@ bool grab_pointer(pointer_action_t pac)
 
 	if (pac == ACTION_MOVE) {
 		put_status(SBSC_MASK_POINTER_ACTION, "pointer_action 0x%08X 0x%08X 0x%08X move begin\n", loc.monitor->id, loc.desktop->id, loc.node->id);
+	} else if (pac == ACTION_WARP) {
+		put_status(SBSC_MASK_POINTER_ACTION, "pointer_action 0x%08X 0x%08X 0x%08X warp begin\n", loc.monitor->id, loc.desktop->id, loc.node->id);
 	} else if (pac == ACTION_RESIZE_CORNER) {
 		put_status(SBSC_MASK_POINTER_ACTION, "pointer_action 0x%08X 0x%08X 0x%08X resize_corner begin\n", loc.monitor->id, loc.desktop->id, loc.node->id);
 	} else if (pac == ACTION_RESIZE_SIDE) {
@@ -288,6 +290,8 @@ void track_pointer(coordinates_t loc, pointer_action_t pac, xcb_point_t pos)
 			int16_t dy = e->root_y - last_motion_y;
 			if (pac == ACTION_MOVE) {
 				move_client(&loc, dx, dy);
+			} else if (pac == ACTION_WARP) {
+				warp_client(&loc, dx, dy);
 			} else {
 				if (honor_size_hints) {
 					resize_client(&loc, rh, e->root_x, e->root_y, false);
